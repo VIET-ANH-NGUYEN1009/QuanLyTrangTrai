@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="style.css" />
+    <!-- Fontawesome Icons -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/js/all.min.js"></script>
+    <title>Smart Home</title>
+  </head>
+  <body>
+    <!-- Top Widget -->
+    <div class="top-widget">
+      <div class="date" id="date">Đang tải...</div>
+      <div class="time" id="time">--:--</div>
+    </div>
+
+    <!-- Temperature + Humidity -->
+    <div class="bottom-widgets">
+      <div class="widget">
+        <div class="icon"><i class="fa-solid fa-temperature-half"></i></div>
+        <div class="value" id="temp">--°C</div>
+        <div class="label">Nhiệt độ</div>
+      </div>
+
+      <div class="widget">
+        <div class="icon"><i class="fa-solid fa-droplet"></i></div>
+        <div class="value" id="humi">--%</div>
+        <div class="label">Độ ẩm</div>
+      </div>
+    </div>
+
+    <!-- Control Section -->
+    <div class="control-section">
+      <div class="control-title">Điều khiển thiết bị</div>
+
+      <div class="control-item">
+        <div class="device-info">
+          <i class="fa-solid fa-lightbulb device-icon" id="icon-light"></i>
+          <span>Đèn</span>
+        </div>
+        <button class="btn-off" id="btn-light">Bật đèn</button>
+      </div>
+
+      <div class="control-item">
+        <div class="device-info">
+          <i class="fa-solid fa-fan device-icon" id="icon-fan"></i>
+          <span>Quạt</span>
+        </div>
+        <button class="btn-off" id="btn-fan">Bật quạt</button>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
