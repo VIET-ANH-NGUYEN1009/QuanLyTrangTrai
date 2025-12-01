@@ -8,8 +8,10 @@ function updateTime() {
     minute: "2-digit",
   });
 
-  document.getElementById("date").innerText = `${day} - ${date}`;
-  document.getElementById("time").innerText = time;
+  const dateEl = document.getElementById("date");
+  const timeEl = document.getElementById("time");
+  if (dateEl) dateEl.innerText = `${day} - ${date}`;
+  if (timeEl) timeEl.innerText = time;
 }
 setInterval(updateTime, 1000);
 updateTime();
@@ -19,13 +21,17 @@ let lightOn = false;
 let fanOn   = false;
 let pumpOn  = false;
 
-const btnLight = document.getElementById("btn-light");
-const btnFan   = document.getElementById("btn-fan");
-const btnPump  = document.getElementById("btn-pump");
+const btnLight   = document.getElementById("btn-light");
+const btnFan     = document.getElementById("btn-fan");
+const btnPump    = document.getElementById("btn-pump");
 
-const iconLight = document.getElementById("icon-light");
-const iconFan   = document.getElementById("icon-fan");
-const iconPump  = document.getElementById("icon-pump");
+const iconLight  = document.getElementById("icon-light");
+const iconFan    = document.getElementById("icon-fan");
+const iconPump   = document.getElementById("icon-pump");
+
+const tempEl     = document.getElementById("temp");
+const humiEl     = document.getElementById("humi");
+const ldrEl      = document.getElementById("ldr");
 
 // URL API backend trên Render
 const API_BASE_URL = "https://api-quan-ly-trang-trai.onrender.com";
@@ -39,9 +45,9 @@ async function fetchStatus() {
 
     // Cập nhật cảm biến
     if (data.sensor) {
-      document.getElementById("temp").innerText = `${data.sensor.temp}°C`;
-      document.getElementById("humi").innerText = `${data.sensor.hum}%`;
-      document.getElementById("ldr").innerText  = `${data.sensor.ldr}`;
+      if (tempEl) tempEl.innerText = `${data.sensor.temp}°C`;
+      if (humiEl) humiEl.innerText = `${data.sensor.hum}%`;
+      if (ldrEl)  ldrEl.innerText  = `${data.sensor.ldr}`;
     }
 
     // Cập nhật trạng thái thiết bị
@@ -50,20 +56,26 @@ async function fetchStatus() {
       fanOn   = data.devices.fan || false;
       pumpOn  = data.devices.pump || false;
 
-      // LED
-      btnLight.innerText = lightOn ? "Tắt đèn" : "Bật đèn";
-      btnLight.className = lightOn ? "btn-on" : "btn-off";
-      iconLight.style.color = lightOn ? "#ffeb3b" : "#777";
+      // Đèn
+      if (btnLight) {
+        btnLight.innerText = lightOn ? "Tắt đèn" : "Bật đèn";
+        btnLight.className = lightOn ? "btn-on" : "btn-off";
+      }
+      if (iconLight) iconLight.style.color = lightOn ? "#ffeb3b" : "#777";
 
       // Quạt
-      btnFan.innerText = fanOn ? "Tắt quạt" : "Bật quạt";
-      btnFan.className = fanOn ? "btn-on" : "btn-off";
-      iconFan.style.color = fanOn ? "#1c75ff" : "#777";
+      if (btnFan) {
+        btnFan.innerText = fanOn ? "Tắt quạt" : "Bật quạt";
+        btnFan.className = fanOn ? "btn-on" : "btn-off";
+      }
+      if (iconFan) iconFan.style.color = fanOn ? "#1c75ff" : "#777";
 
       // Bơm
-      btnPump.innerText = pumpOn ? "Tắt bơm" : "Bật bơm";
-      btnPump.className = pumpOn ? "btn-on" : "btn-off";
-      iconPump.style.color = pumpOn ? "#00c853" : "#777";
+      if (btnPump) {
+        btnPump.innerText = pumpOn ? "Tắt bơm" : "Bật bơm";
+        btnPump.className = pumpOn ? "btn-on" : "btn-off";
+      }
+      if (iconPump) iconPump.style.color = pumpOn ? "#00c853" : "#777";
     }
 
     return data;
@@ -91,21 +103,27 @@ async function sendControl(device, action) {
   }
 }
 
-// Gắn sự kiện nút
-btnLight.onclick = () => {
-  const newState = !lightOn;
-  sendControl("led", newState ? "on" : "off");
-};
+// Gắn sự kiện nút (chống lỗi nếu nút chưa tồn tại)
+if (btnLight) {
+  btnLight.onclick = () => {
+    const newState = !lightOn;
+    sendControl("led", newState ? "on" : "off");
+  };
+}
 
-btnFan.onclick = () => {
-  const newState = !fanOn;
-  sendControl("fan", newState ? "on" : "off");
-};
+if (btnFan) {
+  btnFan.onclick = () => {
+    const newState = !fanOn;
+    sendControl("fan", newState ? "on" : "off");
+  };
+}
 
-btnPump.onclick = () => {
-  const newState = !pumpOn;
-  sendControl("pump", newState ? "on" : "off");
-};
+if (btnPump) {
+  btnPump.onclick = () => {
+    const newState = !pumpOn;
+    sendControl("pump", newState ? "on" : "off");
+  };
+}
 
 // Khởi động lấy trạng thái
 setInterval(fetchStatus, 2000);
