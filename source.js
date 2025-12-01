@@ -1,130 +1,130 @@
-// Cập nhật thời gian
-function updateTime() {
-  const now = new Date();
-  const day = now.toLocaleDateString("vi-VN", { weekday: "long" });
-  const date = now.toLocaleDateString("vi-VN");
-  const time = now.toLocaleTimeString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  const dateEl = document.getElementById("date");
-  const timeEl = document.getElementById("time");
-  if (dateEl) dateEl.innerText = `${day} - ${date}`;
-  if (timeEl) timeEl.innerText = time;
-}
-setInterval(updateTime, 1000);
-updateTime();
+// server.js
+const express = require("express");
+const path = require("path");
+const cors = require("cors");
+const app = express();
+const port = 3000;
 
 // Trạng thái thiết bị
-let lightOn = false;
-let fanOn   = false;
-let pumpOn  = false;
+let devices = {
+  fan: false,
+  led: false,
+  pump: false,
+  temp: 0,
+  hum: 0,
+  ldr: 0,
+};
 
-const btnLight   = document.getElementById("btn-light");
-const btnFan     = document.getElementById("btn-fan");
-const btnPump    = document.getElementById("btn-pump");
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.static(path.join(__dirname, "public")));
 
-const iconLight  = document.getElementById("icon-light");
-const iconFan    = document.getElementById("icon-fan");
-const iconPump   = document.getElementById("icon-pump");
+// ===== API điều khiển thiết bị =====
+// Quạt
+app.get("/fan/on", (req, res) => {
+  devices.fan = true;
+  console.log("Fan ON");
+  res.send("Fan ON");
+});
+app.get("/fan/off", (req, res) => {
+  devices.fan = false;
+  console.log("Fan OFF");
+  res.send("Fan OFF");
+});
 
-const tempEl     = document.getElementById("temp");
-const humiEl     = document.getElementById("humi");
-const ldrEl      = document.getElementById("ldr");
+// LED
+app.get("/led/on", (req, res) => {
+  devices.led = true;
+  console.log("LED ON");
+  res.send("LED ON");
+});
+app.get("/led/off", (req, res) => {
+  devices.led = false;
+  console.log("LED OFF");
+  res.send("LED OFF");
+});
 
-// URL API backend trên Render
-const API_BASE_URL = "https://api-quan-ly-trang-trai.onrender.com";
+// Bơm
+app.get("/pump/on", (req, res) => {
+  devices.pump = true;
+  console.log("Pump ON");
+  res.send("Pump ON");
+});
+app.get("/pump/off", (req, res) => {
+  devices.pump = false;
+  console.log("Pump OFF");
+  res.send("Pump OFF");
+});
 
-// Lấy trạng thái từ server
-async function fetchStatus() {
+// ===== API nhận dữ liệu từ ESP32 =====
+app.post("/api/sensor", (req, res) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/status`);
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    const data = await response.json();
-
-    // Cập nhật cảm biến
-    if (data.sensor) {
-      if (tempEl) tempEl.innerText = `${data.sensor.temp}°C`;
-      if (humiEl) humiEl.innerText = `${data.sensor.hum}%`;
-      if (ldrEl)  ldrEl.innerText  = `${data.sensor.ldr}`;
+    const { temp, hum } = req.body;
+    if (typeof temp === "number" && typeof hum === "number") {
+      devices.temp = temp;
+      devices.hum = hum;
+      console.log(`🌡️ Temp: ${temp}°C, 💧 Hum: ${hum}%`);
+      res.json({ success: true });
+    } else {
+      res.status(400).json({ error: "Invalid sensor data" });
     }
-
-    // Cập nhật trạng thái thiết bị
-    if (data.devices) {
-      lightOn = data.devices.led || false;
-      fanOn   = data.devices.fan || false;
-      pumpOn  = data.devices.pump || false;
-
-      // Đèn
-      if (btnLight) {
-        btnLight.innerText = lightOn ? "Tắt đèn" : "Bật đèn";
-        btnLight.className = lightOn ? "btn-on" : "btn-off";
-      }
-      if (iconLight) iconLight.style.color = lightOn ? "#ffeb3b" : "#777";
-
-      // Quạt
-      if (btnFan) {
-        btnFan.innerText = fanOn ? "Tắt quạt" : "Bật quạt";
-        btnFan.className = fanOn ? "btn-on" : "btn-off";
-      }
-      if (iconFan) iconFan.style.color = fanOn ? "#1c75ff" : "#777";
-
-      // Bơm
-      if (btnPump) {
-        btnPump.innerText = pumpOn ? "Tắt bơm" : "Bật bơm";
-        btnPump.className = pumpOn ? "btn-on" : "btn-off";
-      }
-      if (iconPump) iconPump.style.color = pumpOn ? "#00c853" : "#777";
-    }
-
-    return data;
   } catch (error) {
-    console.error("❌ Lỗi lấy trạng thái:", error);
+    console.error("Error receiving sensor data:", error);
+    res.status(400).json({ error: "Invalid request" });
   }
-}
+});
 
-// Gửi lệnh điều khiển
-async function sendControl(device, action) {
+// API: Lấy trạng thái hiện tại (cho web client)
+app.get("/api/status", (req, res) => {
+  // LDR vẫn giả lập
+  devices.ldr = Math.floor(Math.random() * 2000); // 0-2000
+
+  res.json({
+    devices: {
+      fan: devices.fan,
+      led: devices.led,
+      pump: devices.pump,
+    },
+    sensor: {
+      temp: devices.temp,
+      hum: devices.hum,
+      ldr: devices.ldr,
+    },
+  });
+});
+
+// API: Điều khiển thiết bị (từ web client)
+app.post("/api/control", (req, res) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/control`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ device, action }),
-    });
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    const data = await response.json();
-    console.log("📤 Đã gửi lệnh:", device, action);
-
-    if (data.success) setTimeout(fetchStatus, 100);
-    return data;
+    const { device, action } = req.body;
+    if (device === "led" || device === "fan") {
+      devices[device] = action === "on";
+      console.log(`💡 ${device.toUpperCase()}: ${action.toUpperCase()}`);
+      res.json({
+        success: true,
+        devices: { led: devices.led, fan: devices.fan },
+      });
+    } else {
+      res.status(400).json({ error: "Invalid device" });
+    }
   } catch (error) {
-    console.error("❌ Lỗi gửi lệnh:", error);
+    console.error("Error processing control command:", error);
+    res.status(400).json({ error: "Invalid request" });
   }
-}
+});
 
-// Gắn sự kiện nút (chống lỗi nếu nút chưa tồn tại)
-if (btnLight) {
-  btnLight.onclick = () => {
-    const newState = !lightOn;
-    sendControl("led", newState ? "on" : "off");
-  };
-}
-
-if (btnFan) {
-  btnFan.onclick = () => {
-    const newState = !fanOn;
-    sendControl("fan", newState ? "on" : "off");
-  };
-}
-
-if (btnPump) {
-  btnPump.onclick = () => {
-    const newState = !pumpOn;
-    sendControl("pump", newState ? "on" : "off");
-  };
-}
-
-// Khởi động lấy trạng thái
-setInterval(fetchStatus, 2000);
-fetchStatus();
+// Start server
+app.listen(port, () => {
+  console.log(`🚀 Server running at http://localhost:${port}`);
+  console.log(`📡 API endpoints:`);
+  console.log(` GET /api/status - Lấy trạng thái (web client)`);
+  console.log(` POST /api/control - Điều khiển thiết bị (web client)`);
+  console.log(` POST /api/sensor - ESP32 gửi nhiệt độ & độ ẩm`);
+  console.log(` GET /fan/on - Bật quạt`);
+  console.log(` GET /fan/off - Tắt quạt`);
+  console.log(` GET /led/on - Bật đèn`);
+  console.log(` GET /led/off - Tắt đèn`);
+  console.log(` GET /pump/on - Bật bơm`);
+  console.log(` GET /pump/off - Tắt bơm\n`);
+});
