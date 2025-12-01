@@ -16,12 +16,16 @@ updateTime();
 
 // Trạng thái thiết bị
 let lightOn = false;
-let fanOn = false;
+let fanOn   = false;
+let pumpOn  = false;
 
 const btnLight = document.getElementById("btn-light");
-const btnFan = document.getElementById("btn-fan");
+const btnFan   = document.getElementById("btn-fan");
+const btnPump  = document.getElementById("btn-pump");
+
 const iconLight = document.getElementById("icon-light");
-const iconFan = document.getElementById("icon-fan");
+const iconFan   = document.getElementById("icon-fan");
+const iconPump  = document.getElementById("icon-pump");
 
 // URL API backend trên Render
 const API_BASE_URL = "https://api-quan-ly-trang-trai.onrender.com";
@@ -37,20 +41,29 @@ async function fetchStatus() {
     if (data.sensor) {
       document.getElementById("temp").innerText = `${data.sensor.temp}°C`;
       document.getElementById("humi").innerText = `${data.sensor.hum}%`;
+      document.getElementById("ldr").innerText  = `${data.sensor.ldr}`;
     }
 
     // Cập nhật trạng thái thiết bị
     if (data.devices) {
       lightOn = data.devices.led || false;
-      fanOn = data.devices.fan || false;
+      fanOn   = data.devices.fan || false;
+      pumpOn  = data.devices.pump || false;
 
+      // LED
       btnLight.innerText = lightOn ? "Tắt đèn" : "Bật đèn";
       btnLight.className = lightOn ? "btn-on" : "btn-off";
       iconLight.style.color = lightOn ? "#ffeb3b" : "#777";
 
+      // Quạt
       btnFan.innerText = fanOn ? "Tắt quạt" : "Bật quạt";
       btnFan.className = fanOn ? "btn-on" : "btn-off";
       iconFan.style.color = fanOn ? "#1c75ff" : "#777";
+
+      // Bơm
+      btnPump.innerText = pumpOn ? "Tắt bơm" : "Bật bơm";
+      btnPump.className = pumpOn ? "btn-on" : "btn-off";
+      iconPump.style.color = pumpOn ? "#00c853" : "#777";
     }
 
     return data;
@@ -87,6 +100,11 @@ btnLight.onclick = () => {
 btnFan.onclick = () => {
   const newState = !fanOn;
   sendControl("fan", newState ? "on" : "off");
+};
+
+btnPump.onclick = () => {
+  const newState = !pumpOn;
+  sendControl("pump", newState ? "on" : "off");
 };
 
 // Khởi động lấy trạng thái
