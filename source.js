@@ -1,20 +1,49 @@
-// URL API backend trên Render
+// ================== Cập nhật thời gian ==================
+function updateTime() {
+  const now = new Date();
+  const day = now.toLocaleDateString("vi-VN", { weekday: "long" });
+  const date = now.toLocaleDateString("vi-VN");
+  const time = now.toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const dateEl = document.getElementById("date");
+  const timeEl = document.getElementById("time");
+  if (dateEl) dateEl.innerText = `${day} - ${date}`;
+  if (timeEl) timeEl.innerText = time;
+}
+setInterval(updateTime, 1000);
+updateTime();
+
+// ================== Biến trạng thái ==================
+let lightOn = false;
+let fanOn   = false;
+
+const btnLight  = document.getElementById("btn-light");
+const btnFan    = document.getElementById("btn-fan");
+
+const iconLight = document.getElementById("icon-light");
+const iconFan   = document.getElementById("icon-fan");
+
+const tempEl    = document.getElementById("temp");
+const humiEl    = document.getElementById("humi");
+
+// ================== URL API backend ==================
 const API_BASE_URL = "https://api-quan-ly-trang-trai.onrender.com";
 
-// Hàm cập nhật giao diện từ dữ liệu backend
+// ================== Hàm cập nhật giao diện ==================
 function updateUI(data) {
-  // Cập nhật cảm biến
+  // Cảm biến
   if (data.sensor) {
     if (tempEl) tempEl.innerText = `${data.sensor.temp}°C`;
     if (humiEl) humiEl.innerText = `${data.sensor.hum}%`;
-    if (ldrEl)  ldrEl.innerText  = `${data.sensor.ldr}`;
   }
 
-  // Cập nhật trạng thái thiết bị
+  // Thiết bị
   if (data.devices) {
     lightOn = data.devices.led || false;
     fanOn   = data.devices.fan || false;
-    pumpOn  = data.devices.pump || false;
 
     // Đèn
     if (btnLight) {
@@ -29,38 +58,22 @@ function updateUI(data) {
       btnFan.className = fanOn ? "btn-on" : "btn-off";
     }
     if (iconFan) iconFan.style.color = fanOn ? "#1c75ff" : "#777";
-
-    // Bơm
-    if (btnPump) {
-      btnPump.innerText = pumpOn ? "Tắt bơm" : "Bật bơm";
-      btnPump.className = pumpOn ? "btn-on" : "btn-off";
-    }
-    if (iconPump) iconPump.style.color = pumpOn ? "#00c853" : "#777";
   }
 }
 
-// Kết nối SSE để nhận tín hiệu realtime
-function connectSSE() {
-  const eventSource = new EventSource(`${API_BASE_URL}/api/status/stream`);
-
-  eventSource.onmessage = (event) => {
-    try {
-      const data = JSON.parse(event.data);
-      updateUI(data);
-    } catch (err) {
-      console.error("❌ Lỗi parse dữ liệu SSE:", err);
-    }
-  };
-
-  eventSource.onerror = (err) => {
-    console.error("❌ Lỗi SSE:", err);
-    eventSource.close();
-    // Thử kết nối lại sau 5 giây
-    setTimeout(connectSSE, 5000);
-  };
+// ================== Lấy trạng thái từ server ==================
+async function fetchStatus() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/status`);
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    updateUI(data);
+  } catch (error) {
+    console.error("❌ Lỗi lấy trạng thái:", error);
+  }
 }
 
-// Gửi lệnh điều khiển (giữ nguyên như cũ)
+// ================== Gửi lệnh điều khiển ==================
 async function sendControl(device, action) {
   try {
     const response = await fetch(`${API_BASE_URL}/api/control`, {
@@ -71,22 +84,28 @@ async function sendControl(device, action) {
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const data = await response.json();
     console.log("📤 Đã gửi lệnh:", device, action);
-    return data;
+
+    if (data.success) setTimeout(fetchStatus, 200);
   } catch (error) {
     console.error("❌ Lỗi gửi lệnh:", error);
   }
 }
 
-// Gắn sự kiện nút
+// ================== Gắn sự kiện nút ==================
 if (btnLight) {
-  btnLight.onclick = () => sendControl("led", !lightOn ? "on" : "off");
-}
-if (btnFan) {
-  btnFan.onclick = () => sendControl("fan", !fanOn ? "on" : "off");
-}
-if (btnPump) {
-  btnPump.onclick = () => sendControl("pump", !pumpOn ? "on" : "off");
+  btnLight.onclick = () => {
+    const newState = !lightOn;
+    sendControl("led", newState ? "on" : "off");
+  };
 }
 
-// Khởi động SSE
-connectSSE();
+if (btnFan) {
+  btnFan.onclick = () => {
+    const newState = !fanOn;
+    sendControl("fan", newState ? "on" : "off");
+  };
+}
+
+// ================== Khởi động ==================
+setInterval(fetchStatus, 3000);
+fetchStatus();
